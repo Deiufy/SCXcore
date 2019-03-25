@@ -23,6 +23,7 @@
 #include "support/networkprovider.h"
 #include "support/scxcimutils.h"
 #include <sstream>
+#include <ctime>
 
 using namespace SCXSystemLib;
 using namespace SCXCoreLib;
@@ -79,6 +80,7 @@ void SCX_LANEndpoint_Class_Provider::Load(
         // Global lock for NetworkProvider class
         SCXCoreLib::SCXThreadLock lock(SCXCoreLib::ThreadLockHandleGet(L"SCXCore::NetworkProvider::Lock"));
         SCXCore::g_NetworkProvider.Load();
+        
 
         // Notify that we don't wish to unload
         MI_Result r = context.RefuseUnload();
@@ -87,7 +89,7 @@ void SCX_LANEndpoint_Class_Provider::Load(
             SCX_LOGWARNING(SCXCore::g_NetworkProvider.GetLogHandle(),
                     SCXCoreLib::StrAppend(L"SCX_LANEndpoint_Class_Provider::Load() refuses to not unload, error = ", r));
         }
-
+	prev_time=
         context.Post(MI_RESULT_OK);
     }
     SCX_PEX_END( L"SCX_LANEndpoint_Class_Provider::Load", SCXCore::g_NetworkProvider.GetLogHandle() );
@@ -125,6 +127,33 @@ void SCX_LANEndpoint_Class_Provider::EnumerateInstances(
         // Update network PAL instance. This is both update of number of interfaces and
         // current statistics for each interfaces.
         SCXHandle<SCXCore::NetworkProviderDependencies> deps = SCXCore::g_NetworkProvider.getDependencies();
+        bool enumAll=true;
+        string sinterface;
+
+if(filter) {
+                char* e[1000]={'\0'};
+                char* q[1000]={'\0'};
+                const MI_Char** expr=(const MI_Char**)&e;
+                const MI_Char** query=(const MI_Char**)&q;
+                MI_Filter_GetExpression(filter,query,expr);
+                SCX_LOGTRACE(log,  SCXCoreLib::StrAppend(L"LANEndpoint Provider Filter Set",*expr));
+
+                char *pos=strstr(*expr,"=");
+                if(!pos){
+                        SCX_LOGTRACE(log,L"LANEndpoint Provider Filter incorrect Input");
+                        deps->UpdateIntf(false);
+                }
+                else{
+                        char interface[500]={'\0'};
+                        pos+=2;
+                        strcpy(interface,pos);
+                        interface[strlen(interface)-1]='\0';
+                        enumAll=false;
+                        sinterface=string(interface);
+                        SCX_LOGTRACE(log,  SCXCoreLib::StrAppend(L"LANEndpoint Provider Filter Set",interface));
+               }
+}
+else
         deps->UpdateIntf(false);
 
         SCX_LOGTRACE(log, StrAppend(L"Number of interfaces = ", deps->IntfCount()));
@@ -132,6 +161,7 @@ void SCX_LANEndpoint_Class_Provider::EnumerateInstances(
         for(size_t i = 0; i < deps->IntfCount(); i++)
         {
             SCXCoreLib::SCXHandle<SCXSystemLib::NetworkInterfaceInstance> intf = deps->GetIntf(i);
+            if(!enumAll && intf.GetName()!=sinterface) continue;
             SCX_LANEndpoint_Class inst;
             EnumerateOneInstance(context, inst, keysOnly, intf);
         }
