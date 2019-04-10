@@ -132,6 +132,16 @@ void SCX_LANEndpoint_Class_Provider::EnumerateInstances(
         for(size_t i = 0; i < deps->IntfCount(); i++)
         {
             SCXCoreLib::SCXHandle<SCXSystemLib::NetworkInterfaceInstance> intf = deps->GetIntf(i);
+            if(filter) { 
+                if(intf.GetName() != filter->Name) {
+                  SCX_LOGTRACE(log, L"LANEndpoint Provider Filter set and Name not Matched");
+                  continue;
+                }
+                SCX_LOGTRACE(log, L"LANEndpoint Provider Filter Set and Name Matched");
+            }
+            else
+                SCX_LOGTRACE(log, L"LANEndpoint Provider Filter Not Set");
+
             SCX_LANEndpoint_Class inst;
             EnumerateOneInstance(context, inst, keysOnly, intf);
         }
